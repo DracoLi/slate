@@ -57,7 +57,7 @@ function Plugin(options = {}) {
    * @return {State}
    */
 
-  function onBeforeInput(e, data, state, editor) {
+  function onBeforeInput(e, data, state, editor, shouldForceRender=false) {
     const { document, startKey, startOffset, startInline, startText } = state
 
     // Determine what the characters would be if natively inserted.
@@ -88,14 +88,7 @@ function Plugin(options = {}) {
     // current node is not empty, there are no marks on the cursor, the cursor
     // is not at the edge of an inline node, and the natively inserted
     // characters would be the same as the non-native.
-    const isNative = (
-      (state.isCollapsed) &&
-      (state.startText.text != '') &&
-      (state.selection.marks == null) &&
-      (!startInline || !state.selection.isAtStartOf(startInline)) &&
-      (!startInline || !state.selection.isAtEndOf(startInline)) &&
-      (chars.equals(nextChars))
-    )
+    const isNative = false
 
     // Add the `isNative` flag directly, so we don't have to re-transform.
     if (isNative) {
@@ -713,6 +706,8 @@ function Plugin(options = {}) {
     onPaste,
     onSelect,
     schema,
+    onKeyDownBackspace,
+    onKeyDownDelete,
   }
 }
 
