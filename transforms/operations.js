@@ -13,15 +13,18 @@ import uid from '../utils/uid'
  * @return {Transform}
  */
 
-export function addMarkOperation(transform, path, offset, length, mark, haveInverse=true) {
+export function addMarkOperation(transform, path, offset, length, mark) {
   const inverse = []
-  if (haveInverse) {
-    inverse[0] = {
-      type: 'remove_mark',
-      path,
-      offset,
-      length,
-      mark,
+  const node = transform.state.document.assertPath(path)
+  for (let i = 0; i < offset + length; i++) {
+    if (!node.getMarksAtIndex(i + 1).includes(mark)) {
+      inverse.push({
+        type: 'remove_mark',
+        length: 1,
+        offset: i,
+        path,
+        mark,
+      })
     }
   }
 
@@ -174,15 +177,18 @@ export function moveNodeOperation(transform, path, newPath, newIndex) {
  * @return {Transform}
  */
 
-export function removeMarkOperation(transform, path, offset, length, mark, haveInverse=true) {
+export function removeMarkOperation(transform, path, offset, length, mark) {
   const inverse = []
-  if (haveInverse) {
-    inverse[0] = {
-      type: 'add_mark',
-      path,
-      offset,
-      length,
-      mark,
+  const node = transform.state.document.assertPath(path)
+  for (let i = 0; i < offset + length; i++) {
+    if (node.getMarksAtIndex(i + 1).includes(mark)) {
+      inverse.push({
+        type: 'add_mark',
+        length: 1,
+        offset: i,
+        path,
+        mark,
+      })
     }
   }
 

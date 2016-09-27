@@ -9,14 +9,14 @@ import Normalize from '../utils/normalize'
  * @return {Transform}
  */
 
-export function addMark(transform, mark, haveInverse=true) {
+export function addMark(transform, mark) {
   mark = Normalize.mark(mark)
 
   const { state } = transform
   const { document, selection } = state
 
   if (selection.isExpanded) {
-    return transform.addMarkAtRange(selection, mark, haveInverse)
+    return transform.addMarkAtRange(selection, mark)
   }
 
   else if (selection.marks) {
@@ -456,14 +456,14 @@ export function splitInline(transform, depth = Infinity) {
  * @return {Transform}
  */
 
-export function removeMark(transform, mark, haveInverse=true) {
+export function removeMark(transform, mark) {
   mark = Normalize.mark(mark)
 
   const { state } = transform
   const { document, selection } = state
 
   if (selection.isExpanded) {
-    return transform.removeMarkAtRange(selection, mark, haveInverse)
+    return transform.removeMarkAtRange(selection, mark)
   }
 
   else if (selection.marks) {

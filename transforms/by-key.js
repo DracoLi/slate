@@ -13,12 +13,12 @@ import uid from '../utils/uid'
  * @return {Transform}
  */
 
-export function addMarkByKey(transform, key, offset, length, mark, haveInverse=true) {
+export function addMarkByKey(transform, key, offset, length, mark) {
   mark = Normalize.mark(mark)
   const { state } = transform
   const { document } = state
   const path = document.getPath(key)
-  return transform.addMarkOperation(path, offset, length, mark, haveInverse)
+  return transform.addMarkOperation(path, offset, length, mark)
 }
 
 /**
@@ -86,12 +86,12 @@ export function moveNodeByKey(transform, key, newKey, newIndex) {
  * @return {Transform}
  */
 
-export function removeMarkByKey(transform, key, offset, length, mark, haveInverse=true) {
+export function removeMarkByKey(transform, key, offset, length, mark) {
   mark = Normalize.mark(mark)
   const { state } = transform
   const { document } = state
   const path = document.getPath(key)
-  return transform.removeMarkOperation(path, offset, length, mark, haveInverse)
+  return transform.removeMarkOperation(path, offset, length, mark)
 }
 
 /**

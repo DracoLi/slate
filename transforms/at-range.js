@@ -17,7 +17,7 @@ import { List, Set } from 'immutable'
  * @return {Transform}
  */
 
-export function addMarkAtRange(transform, range, mark, haveInverse=true) {
+export function addMarkAtRange(transform, range, mark) {
   if (range.isCollapsed) return transform
 
   const { state } = transform
@@ -34,7 +34,7 @@ export function addMarkAtRange(transform, range, mark, haveInverse=true) {
     if (key == endKey) length = endOffset
     if (key == startKey && key == endKey) length = endOffset - startOffset
 
-    transform.addMarkByKey(key, index, length, mark, haveInverse)
+    transform.addMarkByKey(key, index, length, mark)
   })
 
   return transform
@@ -416,7 +416,7 @@ export function insertTextAtRange(transform, range, text, marks) {
  * @return {Transform}
  */
 
-export function removeMarkAtRange(transform, range, mark, haveInverse=true) {
+export function removeMarkAtRange(transform, range, mark) {
   if (range.isCollapsed) return transform
 
   const { state } = transform
@@ -433,7 +433,7 @@ export function removeMarkAtRange(transform, range, mark, haveInverse=true) {
     if (key == endKey) length = endOffset
     if (key == startKey && key == endKey) length = endOffset - startOffset
 
-    transform.removeMarkByKey(key, index, length, mark, haveInverse)
+    transform.removeMarkByKey(key, index, length, mark)
   })
 
   return transform
