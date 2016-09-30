@@ -133,7 +133,7 @@ function Plugin(options = {}) {
 
   function onCopy(e, data, state) {
     debug('onCopy', data)
-    onCutOrCopy(e, data, state)
+    // onCutOrCopy(e, data, state)
   }
 
   /**
