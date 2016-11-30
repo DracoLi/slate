@@ -760,6 +760,8 @@ function Plugin(options = {}) {
     onPaste,
     onSelect,
     schema,
+    onKeyDownBackspace,
+    onKeyDownDelete,
   }
 }
 
