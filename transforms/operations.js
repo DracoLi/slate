@@ -12,13 +12,19 @@ import Normalize from '../utils/normalize'
  */
 
 export function addMarkOperation(transform, path, offset, length, mark) {
-  const inverse = [{
-    type: 'remove_mark',
-    path,
-    offset,
-    length,
-    mark,
-  }]
+  const inverse = []
+  const node = transform.state.document.assertPath(path)
+  for (let i = 0; i < offset + length; i++) {
+    if (!node.getMarksAtIndex(i + 1).includes(mark)) {
+      inverse.push({
+        type: 'remove_mark',
+        length: 1,
+        offset: i,
+        path,
+        mark,
+      })
+    }
+  }
 
   const operation = {
     type: 'add_mark',
@@ -176,13 +182,19 @@ export function moveNodeOperation(transform, path, newPath, newIndex) {
  */
 
 export function removeMarkOperation(transform, path, offset, length, mark) {
-  const inverse = [{
-    type: 'add_mark',
-    path,
-    offset,
-    length,
-    mark,
-  }]
+  const inverse = []
+  const node = transform.state.document.assertPath(path)
+  for (let i = 0; i < offset + length; i++) {
+    if (node.getMarksAtIndex(i + 1).includes(mark)) {
+      inverse.push({
+        type: 'add_mark',
+        length: 1,
+        offset: i,
+        path,
+        mark,
+      })
+    }
+  }
 
   const operation = {
     type: 'remove_mark',
