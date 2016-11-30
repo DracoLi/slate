@@ -1,9 +1,0 @@
-
-nodes:
-  - type: paragraph
-    isVoid: true
-    data: {}
-    nodes:
-      - characters:
-          - text: " "
-            marks: []
