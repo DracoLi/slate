@@ -109,6 +109,7 @@ function Plugin(options = {}) {
       (state.isCollapsed) &&
       (state.startText.text != '') &&
       (state.selection.marks == null) &&
+      (state.blocks == null) &&
       // Must not be, for example, at edge of an inline link
       (!startInline || !state.selection.isAtStartOf(startInline)) &&
       (!startInline || !state.selection.isAtEndOf(startInline)) &&
