@@ -6,11 +6,10 @@ import OffsetKey from '../utils/offset-key'
 import React from 'react'
 import ReactDOM from 'react-dom'
 import Selection from '../models/selection'
-import Transfer from '../utils/transfer'
+import getTransferData from '../utils/get-transfer-data'
 import TYPES from '../constants/types'
 import getWindow from 'get-window'
 import keycode from 'keycode'
-import noop from '../utils/noop'
 import { IS_FIREFOX, IS_MAC } from '../constants/environment'
 
 /**
@@ -135,6 +134,8 @@ class Content extends React.Component {
     const { document } = state
     const schema = editor.getSchema()
     const offsetKey = OffsetKey.findKey(element, offset)
+    if (!offsetKey) return null
+
     const { key } = offsetKey
     const node = document.getDescendant(key)
     const decorators = document.getDescendantDecorators(key, schema)
@@ -167,7 +168,7 @@ class Content extends React.Component {
     const { target } = event
     return (
       (target.isContentEditable) &&
-      (target === element || target.closest('[contenteditable]') == element)
+      (target === element || target.closest('[data-slate-editor]') === element)
     )
   }
 
@@ -329,10 +330,10 @@ class Content extends React.Component {
     if (!this.isInContentEditable(event)) return
 
     const { dataTransfer } = event.nativeEvent
-    const transfer = new Transfer(dataTransfer)
+    const data = getTransferData(dataTransfer)
 
     // Prevent default when nodes are dragged to allow dropping.
-    if (transfer.getType() == 'node') {
+    if (data.type == 'node') {
       event.preventDefault()
     }
 
@@ -355,10 +356,10 @@ class Content extends React.Component {
     this.tmp.isDragging = true
     this.tmp.isInternalDrag = true
     const { dataTransfer } = event.nativeEvent
-    const transfer = new Transfer(dataTransfer)
+    const data = getTransferData(dataTransfer)
 
     // If it's a node being dragged, the data type is already set.
-    if (transfer.getType() == 'node') return
+    if (data.type == 'node') return
 
     const { state } = this.props
     const { fragment } = state
@@ -384,8 +385,7 @@ class Content extends React.Component {
     const { state } = this.props
     const { nativeEvent } = event
     const { dataTransfer, x, y } = nativeEvent
-    const transfer = new Transfer(dataTransfer)
-    const data = transfer.getData()
+    const data = getTransferData(dataTransfer)
 
     // Resolve the point where the drop occured.
     let range
@@ -401,6 +401,8 @@ class Content extends React.Component {
     const startNode = range.startContainer
     const startOffset = range.startOffset
     const point = this.getPoint(startNode, startOffset)
+    if (!point) return
+
     const target = Selection.create({
       anchorKey: point.key,
       anchorOffset: point.offset,
@@ -443,9 +445,10 @@ class Content extends React.Component {
     const native = window.getSelection()
     const { anchorNode, anchorOffset } = native
     const point = this.getPoint(anchorNode, anchorOffset)
-    const { key, index, start, end } = point
+    if (!point) return
 
     // Get the range in question.
+    const { key, index, start, end } = point
     const { state, editor } = this.props
     const { document, selection } = state
     const schema = editor.getSchema()
@@ -510,6 +513,13 @@ class Content extends React.Component {
     const key = keycode(which)
     const data = {}
 
+    // Keep track of an `isShifting` flag, because it's often used to trigger
+    // "Paste and Match Style" commands, but isn't available on the event in a
+    // normal paste event.
+    if (key == 'shift') {
+      this.tmp.isShifting = true
+    }
+
     // When composing, these characters commit the composition but also move the
     // selection before we're able to handle it, so prevent their default,
     // selection-moving behavior.
@@ -553,6 +563,21 @@ class Content extends React.Component {
   }
 
   /**
+   * On key up, unset the `isShifting` flag.
+   *
+   * @param {Event} event
+   */
+
+  onKeyUp = (event) => {
+    const { which } = event
+    const key = keycode(which)
+
+    if (key == 'shift') {
+      this.tmp.isShifting = false
+    }
+  }
+
+  /**
    * On paste, determine the type and bubble up.
    *
    * @param {Event} event
@@ -563,8 +588,11 @@ class Content extends React.Component {
     if (!this.isInContentEditable(event)) return
 
     event.preventDefault()
-    const transfer = new Transfer(event.clipboardData)
-    const data = transfer.getData()
+    const data = getTransferData(event.clipboardData)
+
+    // Attach the `isShift` flag, so that people can use it to trigger "Paste
+    // and Match Style" logic.
+    data.isShift = !!this.tmp.isShifting
 
     debug('onPaste', { event, data })
     this.props.onPaste(event, data)
@@ -599,6 +627,7 @@ class Content extends React.Component {
       const { anchorNode, anchorOffset, focusNode, focusOffset } = native
       const anchor = this.getPoint(anchorNode, anchorOffset)
       const focus = this.getPoint(focusNode, focusOffset)
+      if (!anchor || !focus) return
 
       // There are valid situations where a select event will fire when we're
       // already at that position (for example when entering a character), since
@@ -621,6 +650,31 @@ class Content extends React.Component {
         focusOffset: focus.offset,
         isFocused: true,
         isBackward: null
+      }
+
+      // If the selection is at the end of a non-void inline node, and there is
+      // a node after it, put it in the node after instead.
+      const anchorText = document.getNode(anchor.key)
+      const focusText = document.getNode(focus.key)
+      const anchorInline = document.getClosestInline(anchor.key)
+      const focusInline = document.getClosestInline(focus.key)
+
+      if (anchorInline && !anchorInline.isVoid && anchor.offset == anchorText.length) {
+        const block = document.getClosestBlock(anchor.key)
+        const next = block.getNextText(anchor.key)
+        if (next) {
+          properties.anchorKey = next.key
+          properties.anchorOffset = 0
+        }
+      }
+
+      if (focusInline && !focusInline.isVoid && focus.offset == focusText.length) {
+        const block = document.getClosestBlock(focus.key)
+        const next = block.getNextText(focus.key)
+        if (next) {
+          properties.focusKey = next.key
+          properties.focusOffset = 0
+        }
       }
 
       data.selection = selection
@@ -670,6 +724,7 @@ class Content extends React.Component {
 
     return (
       <div
+        data-slate-editor
         key={this.forces}
         ref={this.ref}
         contentEditable={!readOnly}
@@ -687,7 +742,7 @@ class Content extends React.Component {
         onDrop={this.onDrop}
         onInput={this.onInput}
         onKeyDown={this.onKeyDown}
-        onKeyUp={noop}
+        onKeyUp={this.onKeyUp}
         onPaste={this.onPaste}
         onSelect={this.onSelect}
         spellCheck={spellCheck}

@@ -276,7 +276,7 @@ export function splitNodeByKey(transform, key, offset, options = {}) {
   let { document } = state
   const path = document.getPath(key)
 
-  transform.splitNodeOperation(path, offset)
+  transform.splitNodeAtOffsetOperation(path, offset)
 
   if (normalize) {
     const parent = document.getParent(key)
@@ -322,6 +322,87 @@ export function unwrapBlockByKey(transform, key, properties, options) {
   const last = node.getLastText()
   const range = selection.moveToRangeOf(first, last)
   transform.unwrapBlockAtRange(range, properties, options)
+}
+
+/**
+ * Unwrap a single node from its parent.
+ *
+ * If the node is surrounded with siblings, its parent will be
+ * split. If the node is the only child, the parent is removed, and
+ * simply replaced by the node itself.  Cannot unwrap a root node.
+ *
+ * @param {Transform} transform
+ * @param {String} key
+ * @param {Object} options
+ *   @property {Boolean} normalize
+ */
+
+export function unwrapNodeByKey(transform, key, options = {}) {
+  const { normalize = true } = options
+  const { state } = transform
+  const { document } = state
+  const parent = document.getParent(key)
+  const node = parent.getChild(key)
+
+  const index = parent.nodes.indexOf(node)
+  const isFirst = index === 0
+  const isLast = index === parent.nodes.size - 1
+
+  const parentParent = document.getParent(parent.key)
+  const parentIndex = parentParent.nodes.indexOf(parent)
+
+
+  if (parent.nodes.size === 1) {
+    // Remove the parent
+    transform.removeNodeByKey(parent.key, { normalize: false })
+    // and replace it by the node itself
+    transform.insertNodeByKey(parentParent.key, parentIndex, node, options)
+  }
+
+  else if (isFirst) {
+    // Just move the node before its parent
+    transform.moveNodeByKey(key, parentParent.key, parentIndex, options)
+  }
+
+  else if (isLast) {
+    // Just move the node after its parent
+    transform.moveNodeByKey(key, parentParent.key, parentIndex + 1, options)
+  }
+
+  else {
+    const parentPath = document.getPath(parent.key)
+    // Split the parent
+    transform.splitNodeOperation(parentPath, index)
+    // Extract the node in between the splitted parent
+    transform.moveNodeByKey(key, parentParent.key, parentIndex + 1, { normalize: false })
+
+    if (normalize) {
+      transform.normalizeNodeByKey(parentParent.key, SCHEMA)
+    }
+  }
+}
+
+/**
+ * Wrap a node in an inline with `properties`.
+ *
+ * @param {Transform} transform
+ * @param {String} key The node to wrap
+ * @param {Block|Object|String} inline The wrapping inline (its children are discarded)
+ * @param {Object} options
+ *   @property {Boolean} normalize
+ */
+
+export function wrapInlineByKey(transform, key, inline, options) {
+  inline = Normalize.inline(inline)
+  inline = inline.merge({ nodes: inline.nodes.clear() })
+
+  const { document } = transform.state
+  const node = document.assertDescendant(key)
+  const parent = document.getParent(node.key)
+  const index = parent.nodes.indexOf(node)
+
+  transform.insertNodeByKey(parent.key, index, inline, { normalize: false })
+  transform.moveNodeByKey(node.key, inline.key, 0, options)
 }
 
 /**

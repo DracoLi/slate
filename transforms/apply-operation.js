@@ -104,7 +104,7 @@ function insertNode(state, operation) {
 function insertText(state, operation) {
   const { path, offset, text, marks } = operation
   let { document, selection } = state
-  const { startKey, endKey, startOffset, endOffset } = selection
+  const { anchorKey, focusKey, anchorOffset, focusOffset } = selection
   let node = document.assertPath(path)
 
   // Update the document
@@ -112,11 +112,11 @@ function insertText(state, operation) {
   document = document.updateDescendant(node)
 
   // Update the selection
-  if (startKey == node.key && startOffset >= offset) {
-    selection = selection.moveStartOffset(text.length)
+  if (anchorKey == node.key && anchorOffset >= offset) {
+    selection = selection.moveAnchorOffset(text.length)
   }
-  if (endKey == node.key && endOffset >= offset) {
-    selection = selection.moveEndOffset(text.length)
+  if (focusKey == node.key && focusOffset >= offset) {
+    selection = selection.moveFocusOffset(text.length)
   }
 
   state = state.merge({ document, selection })
@@ -287,15 +287,15 @@ function removeText(state, operation) {
   const { path, offset, length } = operation
   const rangeOffset = offset + length
   let { document, selection } = state
-  const { startKey, endKey, startOffset, endOffset } = selection
+  const { anchorKey, focusKey, anchorOffset, focusOffset } = selection
   let node = document.assertPath(path)
 
   // Update the selection
-  if (startKey == node.key && startOffset >= rangeOffset) {
-    selection = selection.moveStartOffset(-length)
+  if (anchorKey == node.key && anchorOffset >= rangeOffset) {
+    selection = selection.moveAnchorOffset(-length)
   }
-  if (endKey == node.key && endOffset >= rangeOffset) {
-    selection = selection.moveEndOffset(-length)
+  if (focusKey == node.key && focusOffset >= rangeOffset) {
+    selection = selection.moveFocusOffset(-length)
   }
 
   node = node.removeText(offset, length)
@@ -399,67 +399,46 @@ function setSelection(state, operation) {
 
 function splitNode(state, operation) {
   const { path, offset, count } = operation
-  const { document } = state
+  let { document, selection } = state
 
-  if (offset === undefined) {
-    return state.merge({
-      document: document.splitNodeAfter(path, count)
-      // No need to update selection
-    })
-  }
-
-  else {
-    // Update document
-    let newDocument = document.splitNode(path, offset)
-
-    // Update selection
-    let { selection } = state
-    const { anchorKey, anchorOffset, focusKey, focusOffset } = selection
-
-    const node = document.assertPath(path)
-    // The text node that was split
-    const splittedText = node.kind == 'text'
-      ? node
-      : node.getTextAtOffset(offset)
-    const textOffset = node.kind == 'text'
-      ? offset
-      : offset - node.getOffset(splittedText.key)
-
-    // Should we update the selection ?
-    const shouldUpdateAnchor = splittedText.key == anchorKey && textOffset <= anchorOffset
-    const shouldUpdateFocus = splittedText.key == focusKey && textOffset <= focusOffset
-    if (shouldUpdateFocus || shouldUpdateAnchor) {
-      // The node next to `node`, resulting from the split
-      const secondNode = newDocument.getNextSibling(node.key)
-      let secondText, newOffset
-
-      if (shouldUpdateAnchor) {
-        newOffset = anchorOffset - textOffset
-        secondText = secondNode.kind == 'text'
-          ? secondNode
-          : secondNode.getTextAtOffset(newOffset)
-        selection = selection.merge({
-          anchorKey: secondText.key,
-          anchorOffset: newOffset
-        })
-      }
-
-      if (shouldUpdateFocus) {
-        newOffset = focusOffset - textOffset
-        secondText = secondNode.kind == 'text'
-          ? secondNode
-          : secondNode.getTextAtOffset(newOffset)
-        selection = selection.merge({
-          focusKey: secondText.key,
-          focusOffset: newOffset
-        })
-      }
-    }
-
-    state = state.merge({
-      document: newDocument,
-      selection
-    })
+  // If there's no offset, it's using the `count` instead.
+  if (offset == null) {
+    document = document.splitNodeAfter(path, count)
+    state = state.merge({ document })
     return state
   }
+
+  // Otherwise, split using the `offset`, but calculate a few things first.
+  const node = document.assertPath(path)
+  const text = node.kind == 'text' ? node : node.getTextAtOffset(offset)
+  const textOffset = node.kind == 'text' ? offset : offset - node.getOffset(text.key)
+  const { anchorKey, anchorOffset, focusKey, focusOffset } = selection
+
+  document = document.splitNode(path, offset)
+
+  // Determine whether we need to update the selection.
+  const splitAnchor = text.key == anchorKey && textOffset <= anchorOffset
+  const splitFocus = text.key == focusKey && textOffset <= focusOffset
+
+  // If either the anchor of focus was after the split, we need to update them.
+  if (splitFocus || splitAnchor) {
+    const nextText = document.getNextText(text.key)
+
+    if (splitAnchor) {
+      selection = selection.merge({
+        anchorKey: nextText.key,
+        anchorOffset: anchorOffset - textOffset
+      })
+    }
+
+    if (splitFocus) {
+      selection = selection.merge({
+        focusKey: nextText.key,
+        focusOffset: focusOffset - textOffset
+      })
+    }
+  }
+
+  state = state.merge({ document, selection })
+  return state
 }
