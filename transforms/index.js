@@ -8,6 +8,12 @@ import {
 } from './apply-operation'
 
 /**
+ * Call external transform.
+ */
+
+import call from './call'
+
+/**
  * Operations.
  */
 
@@ -23,6 +29,7 @@ import {
   setMarkOperation,
   setNodeOperation,
   setSelectionOperation,
+  splitNodeAtOffsetOperation,
   splitNodeOperation,
 } from './operations'
 
@@ -108,7 +115,9 @@ import {
   splitNodeByKey,
   unwrapInlineByKey,
   unwrapBlockByKey,
+  unwrapNodeByKey,
   wrapBlockByKey,
+  wrapInlineByKey,
 } from './by-key'
 
 /**
@@ -135,6 +144,7 @@ import {
   extendForward,
   extendToEndOf,
   extendToStartOf,
+  flipSelection,
   focus,
   moveBackward,
   moveForward,
@@ -184,6 +194,12 @@ export default {
   applyOperation,
 
   /**
+   * Call external transform.
+   */
+
+  call,
+
+  /**
    * Operations.
    */
 
@@ -198,6 +214,7 @@ export default {
   setMarkOperation,
   setNodeOperation,
   setSelectionOperation,
+  splitNodeAtOffsetOperation,
   splitNodeOperation,
 
   /**
@@ -277,7 +294,9 @@ export default {
   splitNodeByKey,
   unwrapInlineByKey,
   unwrapBlockByKey,
+  unwrapNodeByKey,
   wrapBlockByKey,
+  wrapInlineByKey,
 
   /**
    * On selection.
@@ -303,6 +322,7 @@ export default {
   extendToEndOf,
   extendToStartOf,
   focus,
+  flipSelection,
   moveBackward,
   moveForward,
   moveEndOffset,
