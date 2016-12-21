@@ -120,6 +120,8 @@ function Plugin(options = {}) {
       // If the text node in question has no content, browsers might do weird
       // things so we need to insert it normally instead.
       (state.startText.text != '') &&
+      // If the selection has blocks, then we need to render it non-natively
+      (state.blocks == null) &&
       // COMPAT: Browsers do weird things when typing at the edges of inline
       // nodes, so we can't let them render natively. (?)
       (!startInline || !state.selection.isAtStartOf(startInline)) &&
